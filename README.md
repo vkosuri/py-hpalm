@@ -1,7 +1,7 @@
-# PyHPALM
+# py - HPALM
 Python HP ALM RESTful Client
 
-Using the REST API, you can interact with the ALM Platform. You can create a client application based on the API to create, read, update, and delete entities. Without any coding,  you can also use a browser as your client to read information from ALM.
+Using the REST API, you can interact with the ALM Platform.
 
 
 HTTP return codes are used:

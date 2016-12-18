@@ -1,10 +1,19 @@
-# py - HPALM
+py - hpalm
+==========
+
 Python HP ALM RESTful Client
 
 Using the REST API, you can interact with the ALM Platform.
 
+``` Bash
+virtuenv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-HTTP return codes are used:
+HTTP return codes are used
+--------------------------
 
 |  Code | Cause                                               |
 |-------|-----------------------------------------------------|

@@ -11,26 +11,35 @@ HTTP Methods
     POST: Varieis
 """
 from lxml import etree
+from hpalm import ALMException
+from hpalm import HPALM
+import requests
+import logging
+import os
+
+logger = logging.getLogger(__name__)
 
 def text_xml(xml, xpath):
     dom_tree = etree.fromstring(xml)
     return dom_tree.xpath(xpath)
 
-class TestLab(object):
-    def __init__(self):        
-        HPALM hp;
-    def get_testset_inst(tid):
+class TestLab(HPALM):
+    def __init__(self):
+        super(self.__class__, self).__init__()
+
+    def get_testset_inst(self, tid):
         """
         This procedure will return list of test-instances in a given test set
+        :param hp: HP object
         :param tid: integer test set identifier
         :returns: list test instances list
         """
-        domain = hp.domain
-        project = hp.project        
+        domain = self.domain
+        project = self.project
         params = '{cycle-id[' + tid + ']}'
-        url = hp.base_url + '/qcbin/rest/domains/' + domain + '/projects/' + project + '/test-instances'
-        response = requests.get(url, params=params, headers=hp.getheaders())
-        test_inst = text_xml(resp.content, "Entity/Fields/Field\[@Name='test-instance'\]/Value/text()")
+        url = self.base_url + '/qcbin/rest/domains/' + domain + '/projects/' + project + '/test-instances'
+        response = requests.get(url, params=params, headers=self.getheaders())
+        test_inst = text_xml(response.content, "Entity/Fields/Field\[@Name='test-instance'\]/Value/text()")
         return test_inst
 
 class Tests(object):
@@ -61,32 +70,17 @@ class TestSet(TestLab):
 
 class TestInstance(TestSet):
     def __init__(self):
-        pass
+        super(self.__class__, self).__init__()
     def create(self, path):
         pass
-    def delete(self, path)
+    def delete(self, path):
         pass
-    def get_test_instance_run_id (self, testset_id, test_id, test_ins) {
-        domain = domain
-        project = project
-        set queryCaluse [concat \{cycle-id\[$testsetId\]\; test-id\[$testid\]\; test-instance\[$testIns\]\; status\[Passed or Failed\]\}]
-        set orderByCaluse [concat \{execution-date\; id\[ASC\]\}]
-        set url [concat /qcbin/rest/domains/$domain/projects/$project/runs]
-        set response [::hpalm::GET $url [list "query" "[concat $queryCaluse]" "order-by" "[concat $orderByCaluse]"]]
-        set doc [dom parse $response]
-        set root [$doc documentElement]
-        set totalResults [$root getAttribute TotalResults]
-        $root delete
-        if {$totalResults == 0} {
-            # puts "Enter valid Testset path"
-            return 0;
-        }
-        set runId [::hpalm::util::GetNodeValue $response "(Entity/Fields/Field\[@Name='id'\]/Value/text()) \[last()\]"]
-        return $runId
+    def get_test_instance_run_id(self, domain, project, testset_id, test_id, test_ins):
+        pass
 
 class Runs(TestInstance):
     def __init__(self):
-        pass
+        super(self.__class__, self).__init__()
     def create(self, path):
         pass
     def delete(self, path):
@@ -101,7 +95,7 @@ class Runs(TestInstance):
             fd = open(full_path, "r")
             ftext = fd.read()
         else:
-            raise ALMExcpetion("Unable to find file")
+            raise ALMException("Unable to find file")
         # get filename    
         fname = os.path.basename(full_path)
         headers = self.getheaders()
@@ -121,5 +115,5 @@ class Runs(TestInstance):
         headers['Accept'] = 'application/octet-stream'
         resp = requests.get(uri, headers=headers)
         if resp.status_code == 200:
-            logger.info("%s data read from file" %(
+            logger.info("%s data read from file" %(resp.text))
         

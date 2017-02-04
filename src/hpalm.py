@@ -5,10 +5,14 @@
 @email: Mallikarjunarao Kosuri <venkatamallikarjunarao.kosuri@adtran.com>
 """
 
+from requests.auth import HTTPBasicAuth
+from lxml import etree
+
+import argparse
 import logging
 import os
 import requests
-from requests.auth import HTTPBasicAuth
+
 
 class ALMException(Exception):
     pass
@@ -29,35 +33,37 @@ def hp_alm_parser():
 
     # Common Options: Server Group
     group_server = common_parser.add_argument_group(title='Server Definition',
-                                                    description='Define connection parameters for REST endpoint')
+                                                    description='Define \
+                                                    connection parameters for \
+                                                    REST endpoint')
     group_server.add_argument("-ip", "--server-ip", type=str,
                               help="HP ALM server", default='')
     group_server.add_argument("-u", "--user", type=str,
-                              help="Username.")                              )
+                              help="Username.")
     group_server.add_argument("-p", "--password", type=str,
                               help="Password")
     group_server.add_argument("-d", "--domain", type=str, help="Domain name")
-    group_server.add_argument("-p", "--project", type=str, help="Project name")    
-    
+    group_server.add_argument("-p", "--project", type=str, help="Project name")
+
     return parser
 
 
 class HPALM(object):
     headers = None
-    def __init__(self, host, port=8080, username, password, domain, project):
-        if host == None or port == None or username == None or \
-                password == None or domain == None or project == None:
+
+    def __init__(self, host, port='8080', username=None, password=None, domain=None, project=None):
+        if not (host or username or  password or domain or project):
             raise ALMException("Please provide all mandatory params")
-            
+
         self.base_url = 'http://' + host + ':' + port
         self.username = username
         self.password = password
         self.domain = domain
         self.project = project
-        
+
     def getheaders(self):
         return self.headers
-    
+
     def login(self):
         """
         Login into hp alm
@@ -82,18 +88,18 @@ class HPALM(object):
         if resp.status_code == 200:
             logger.info("%s  %s logged into alm" %(resp.status_code, self.username))
         else:
-            raise ALMException("%s  %s failed to logging into HP ALM" %(resp.status_code, self.username))            
-        return resp.status_code  
-        
+            raise ALMException("%s  %s failed to logging into HP ALM" %(resp.status_code, self.username))
+        return resp.status_code
+
     def __del__(self):
         uri = self.base_url + '/qcbin/authentication-point/logout'
         resp = requests.get(uri, headers=self.headers)
         if resp.status_code == 200:
             logger.info("%s  %s logged out alm" %(resp.status_code, self.username))
         else:
-            raise ALMException("%s  %s failed to loggedout from HP ALM" %(resp.status_code, self.username))            
+            raise ALMException("%s  %s failed to loggedout from HP ALM" %(resp.status_code, self.username))
         return resp.status_code
-        
+
 def text_xml(xml, xpath):
     dom_tree = etree.fromstring(xml)
     return dom_tree.xpath(xpath)
@@ -101,7 +107,7 @@ def text_xml(xml, xpath):
 class TestLab(HPALM):
     """
     Description
-        The meta-data for an entitity type defined in the project. 
+        The meta-data for an entitity type defined in the project.
     URL
         http://host:port/qcbin/rest/domains/{domain}/projects/{project}/{Entity Name}/{Entity Property}
     HTTP Methods
@@ -110,9 +116,9 @@ class TestLab(HPALM):
         DELETE: Deletes
         POST: Varieis
     """
-    def __init__(self):        
-        pass;
-    
+    def __init__(self):
+        super(self.__class__, self).__init__()
+
     def run_attach_file(self, uri, report_id, full_path):
         """
         Attach file to test instance run
@@ -123,7 +129,7 @@ class TestLab(HPALM):
             fd = open(full_path, "r")
             ftext = fd.read()
         else:
-            raise ALMExcpetion("Unable to find file")
+            raise ALMException("Unable to find file")
         # get filename    
         fname = os.path.basename(full_path)
         headers = self.getheaders()
@@ -136,10 +142,10 @@ class TestLab(HPALM):
         else:
             logger.error("Failed to create to attachement file: %s size: %d" %(fname, len(ftext)))
         return resp.status_code
-    
+
     def run_get_attached_file(self, uri):
         """
-        Get report attachment of given test instance        
+        Get report attachment of given test instance
         """
         headers = self.getheaders()
         _uri = self.base_url + uri
@@ -154,8 +160,8 @@ class TestLab(HPALM):
         :param uri: HP ALM URI
         :param status: Needs to change report status
         :returns: sucess HTTP message
-        """        
-        for i in 2:
+        """
+        for i in range(start=1, stop=2):
             if status == "Passed":
                 status = "Failed"
                 xml = "<Entity Type='run'><Fields><Field Name='status'><Value>" + status + "</Value></Field></Fields></Entity>"
@@ -164,10 +170,10 @@ class TestLab(HPALM):
                 status = "Passed"
                 xml = "<Entity Type='run'><Fields><Field Name='status'><Value>" + status + "</Value></Field></Fields></Entity>"
                 resp = requests.put(uri, params=xml, headers=self.getheaders())
-        
+
         return resp.status_code
 
-    def tst_inst_get(tid):
+    def tst_inst_get(self, tid):
         """
         This procedure will return list of test-instances in a given test set
         :param tid: integer test set identifier
@@ -176,7 +182,7 @@ class TestLab(HPALM):
         params = '{cycle-id[' + tid + ']}'
         url = self.base_url + '/qcbin/rest/domains/' + self.domain + '/projects/' + self.project + '/test-instances'
         response = requests.get(url, params=params, headers=self.getheaders())
-        test_inst = text_xml(resp.content, "Entity/Fields/Field[@Name='test-instance']/Value/text()")
+        test_inst = text_xml(response.content, "Entity/Fields/Field[@Name='test-instance']/Value/text()")
         return test_inst
 
-    
+

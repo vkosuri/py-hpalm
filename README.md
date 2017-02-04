@@ -12,6 +12,12 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+``` Python
+from hpalm import HPALM
+hp = HPALM(host='10.11.200.1', username='vkosuri', password='pass', domain='test', project='test')
+hp.login()
+```
+
 HTTP return codes are used
 --------------------------
 

@@ -13,7 +13,6 @@ HTTP Methods
 from lxml import etree
 from hpalm import ALMException
 from hpalm import HPALM
-import requests
 import logging
 import os
 
@@ -38,7 +37,7 @@ class TestLab(HPALM):
         project = self.project
         params = '{cycle-id[' + tid + ']}'
         url = self.base_url + '/qcbin/rest/domains/' + domain + '/projects/' + project + '/test-instances'
-        response = requests.get(url, params=params, headers=self.getheaders())
+        response = self.s.get(url, params=params, headers=self.getheaders())
         test_inst = text_xml(response.content, "Entity/Fields/Field\[@Name='test-instance'\]/Value/text()")
         return test_inst
 
@@ -62,7 +61,8 @@ class defects(object):
         
 class TestSet(TestLab):
     def __init__(self):
-        pass
+        super(self.__class__, self).__init__()
+
     def create(self,path):
         pass
     def delete(self, path):
@@ -71,20 +71,26 @@ class TestSet(TestLab):
 class TestInstance(TestSet):
     def __init__(self):
         super(self.__class__, self).__init__()
+
     def create(self, path):
         pass
+
     def delete(self, path):
         pass
+
     def get_test_instance_run_id(self, domain, project, testset_id, test_id, test_ins):
         pass
 
 class Runs(TestInstance):
     def __init__(self):
         super(self.__class__, self).__init__()
+
     def create(self, path):
         pass
+
     def delete(self, path):
-        pass    
+        pass
+
     def attach_file(self, id, full_path):
         """
         Attach file to test instance run
@@ -101,8 +107,8 @@ class Runs(TestInstance):
         headers = self.getheaders()
         headers['content-type'] = 'application/octet-stream'
         headers['slug'] = fname
-        uri = self.base_url + self.ruri
-        resp = requests.post(uri, params=ftext, headers=headers)
+        uri = self.base_url + self.uri
+        resp = self.s.post(uri, params=ftext, headers=headers)
         if resp.status_code == 201:
             logger.info("Sucessfully attached file: %s size: %d" %(fname, len(ftext)))
         else:
@@ -113,7 +119,7 @@ class Runs(TestInstance):
         headers = self.getheaders()
         uri = self.base_url + uri
         headers['Accept'] = 'application/octet-stream'
-        resp = requests.get(uri, headers=headers)
+        resp = self.s.get(uri, headers=headers)
         if resp.status_code == 200:
             logger.info("%s data read from file" %(resp.text))
         

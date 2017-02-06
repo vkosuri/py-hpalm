@@ -62,3 +62,6 @@ target/
 # Vim
 .*.swp
 .idea/*
+.idea/
+hpalm.sqlite
+hpalm_cache.sqlite

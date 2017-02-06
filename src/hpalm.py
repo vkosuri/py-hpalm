@@ -12,7 +12,14 @@ import argparse
 import logging
 import os
 import requests
+import requests_cache
+from requests_cache import CachedSession
 
+# requests_cache.install_cache('hpalm', backend='sqlite', expire_after=300)
+
+CACHE_BACKEND = 'sqlite'
+CACHE_NAME = 'hpalm_cache'
+FAST_SAVE = False
 
 class ALMException(Exception):
     pass
@@ -51,15 +58,17 @@ def hp_alm_parser():
 class HPALM(object):
     headers = None
 
-    def __init__(self, host, port='8080', username=None, password=None, domain=None, project=None):
-        if not (host or username or  password or domain or project):
+    def __init__(self, **kwargs):
+        self.s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, fast_save=FAST_SAVE)
+
+        if not (kwargs['base_url'] or kwargs['username'] or  kwargs['password'] or kwargs['domain'] or kwargs['project']):
             raise ALMException("Please provide all mandatory params")
 
-        self.base_url = 'http://' + host + ':' + port
-        self.username = username
-        self.password = password
-        self.domain = domain
-        self.project = project
+        self.base_url = kwargs['base_url']
+        self.username = kwargs['username']
+        self.password = kwargs['password']
+        self.domain = kwargs['domain']
+        self.project = kwargs['project']
 
     def getheaders(self):
         return self.headers
@@ -70,14 +79,14 @@ class HPALM(object):
         """
         headers = {'Content-Type' : 'application/xml'}
         authurl = self.base_url + '/qcbin/rest/is-authenticated'
-        resp = requests.get(authurl, headers=headers)
+        resp = requests.get(authurl, headers=headers, verify=False)
         # print resp.headers
         # print resp.headers['WWW-Authenticate']
         lwssocookie = resp.headers['WWW-Authenticate']
         headers = {'Cookie' : lwssocookie}
         headers["Accept"] = 'application/xml'
         login_url = self.base_url + '/qcbin/authentication-point/authenticate'
-        resp = requests.get(login_url, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+        resp = self.s.get(login_url, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
         # print resp.headers
         qc_session = resp.headers['Set-Cookie']
         # print qc_session        
@@ -91,9 +100,9 @@ class HPALM(object):
             raise ALMException("%s  %s failed to logging into HP ALM" %(resp.status_code, self.username))
         return resp.status_code
 
-    def __del__(self):
+    def logout(self):
         uri = self.base_url + '/qcbin/authentication-point/logout'
-        resp = requests.get(uri, headers=self.headers)
+        resp = self.s.get(uri, headers=self.headers)
         if resp.status_code == 200:
             logger.info("%s  %s logged out alm" %(resp.status_code, self.username))
         else:
@@ -136,7 +145,7 @@ class TestLab(HPALM):
         headers['content-type'] = 'application/octet-stream'
         headers['slug'] = fname
         uri = self.base_url + uri
-        resp = requests.post(uri, params=ftext, headers=headers)
+        resp = self.s.post(uri, params=ftext, headers=headers)
         if resp.status_code == 201:
             logger.info("Sucessfully attached file: %s size: %d" %(fname, len(ftext)))
         else:
@@ -150,7 +159,7 @@ class TestLab(HPALM):
         headers = self.getheaders()
         _uri = self.base_url + uri
         headers['Accept'] = 'application/octet-stream'
-        resp = requests.get(_uri, headers=headers)
+        resp = self.s.get(_uri, headers=headers)
         # if resp.status_code == 200:
             # logger.info("%s data read from file" %(
 
@@ -165,11 +174,11 @@ class TestLab(HPALM):
             if status == "Passed":
                 status = "Failed"
                 xml = "<Entity Type='run'><Fields><Field Name='status'><Value>" + status + "</Value></Field></Fields></Entity>"
-                resp = requests.put(uri, params=xml, headers=self.getheaders())
+                resp = self.s.put(uri, params=xml, headers=self.getheaders())
             else:
                 status = "Passed"
                 xml = "<Entity Type='run'><Fields><Field Name='status'><Value>" + status + "</Value></Field></Fields></Entity>"
-                resp = requests.put(uri, params=xml, headers=self.getheaders())
+                resp = self.s.put(uri, params=xml, headers=self.getheaders())
 
         return resp.status_code
 
@@ -181,7 +190,7 @@ class TestLab(HPALM):
         """
         params = '{cycle-id[' + tid + ']}'
         url = self.base_url + '/qcbin/rest/domains/' + self.domain + '/projects/' + self.project + '/test-instances'
-        response = requests.get(url, params=params, headers=self.getheaders())
+        response = self.s.get(url, params=params, headers=self.getheaders())
         test_inst = text_xml(response.content, "Entity/Fields/Field[@Name='test-instance']/Value/text()")
         return test_inst
 

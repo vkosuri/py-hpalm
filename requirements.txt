@@ -1,3 +1,4 @@
 requests
 lxml
-sphnix
+sphinx
+requests-cache

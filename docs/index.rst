@@ -11,10 +11,5 @@ Welcome to py-hpalm's documentation!
 
  
    setup
+   entity/index
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

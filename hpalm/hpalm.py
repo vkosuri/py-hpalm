@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 
-"""
-@author: Mallikarjunarao Kosuri
-@email: Mallikarjunarao Kosuri <venkatamallikarjunarao.kosuri@adtran.com>
-"""
-
 from requests.auth import HTTPBasicAuth
 from lxml import etree
 

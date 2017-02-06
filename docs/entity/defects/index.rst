@@ -1,0 +1,3 @@
+.. toctree::
+
+   defect_collection

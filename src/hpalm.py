@@ -61,14 +61,16 @@ class HPALM(object):
     def __init__(self, **kwargs):
         self.s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, fast_save=FAST_SAVE)
 
+        self.base_url = kwargs.get('base_url', None)
+        self.username = kwargs.get('username', None)
+        self.password = kwargs.get('password', None)
+        self.domain = kwargs.get('domain', None)
+        self.project = kwargs.get('project', None)
+        self.verify = kwargs.get('verify', False)
+
         if not (kwargs['base_url'] or kwargs['username'] or  kwargs['password'] or kwargs['domain'] or kwargs['project']):
             raise ALMException("Please provide all mandatory params")
 
-        self.base_url = kwargs['base_url']
-        self.username = kwargs['username']
-        self.password = kwargs['password']
-        self.domain = kwargs['domain']
-        self.project = kwargs['project']
 
     def getheaders(self):
         return self.headers
@@ -86,7 +88,7 @@ class HPALM(object):
         headers = {'Cookie' : lwssocookie}
         headers["Accept"] = 'application/xml'
         login_url = self.base_url + '/qcbin/authentication-point/authenticate'
-        resp = self.s.get(login_url, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+        resp = self.s.get(login_url, headers=headers, auth=HTTPBasicAuth(self.username, self.password), verify=self.verify)
         # print resp.headers
         qc_session = resp.headers['Set-Cookie']
         # print qc_session        

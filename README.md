@@ -24,6 +24,8 @@ hp.login()
 hp.logout()
 ```
 
+# Contirbutions are much appricated
+
 HTTP return codes are used
 --------------------------
 

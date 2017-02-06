@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-import os
 
 package_requires = [
     'requests',
@@ -18,7 +17,8 @@ setup(
     author_email='venkatamallikarjunarao.kosuri@adtran.com',
     platforms="any",
 
-    packages = find_packages(),
+    packages = find_packages('src'), # include all packages under src
+    package_dir={'':'src'}, # tell distutils packages are under src
 
     include_package_data=True,
 

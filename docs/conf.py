@@ -43,16 +43,7 @@ import hpalm
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 # Add any Sphinx extension module names here, as strings.
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosectionlabel',
-    'sphinx.ext.coverage',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.todo',
-    'sphinx.ext.viewcode'
-]
+extensions = []
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

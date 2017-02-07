@@ -12,9 +12,11 @@ HTTP Methods
 """
 from lxml import etree
 from hpalm import ALMException
+from hpalm import ALMMethodNotImplementedException
 from hpalm import HPALM
 import logging
 import os
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +25,8 @@ def text_xml(xml, xpath):
     return dom_tree.xpath(xpath)
 
 class TestLab(HPALM):
-    def __init__(self):
-        super(self.__class__, self).__init__()
+    def __init__(self, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
 
     def get_testset_inst(self, tid):
         """
@@ -37,7 +39,7 @@ class TestLab(HPALM):
         project = self.project
         params = '{cycle-id[' + tid + ']}'
         url = self.base_url + '/qcbin/rest/domains/' + domain + '/projects/' + project + '/test-instances'
-        response = self.s.get(url, params=params, headers=self.getheaders())
+        response = requests.get(url, params=params, headers=self.getheaders())
         test_inst = text_xml(response.content, "Entity/Fields/Field\[@Name='test-instance'\]/Value/text()")
         return test_inst
 
@@ -55,43 +57,58 @@ class Tests(object):
     def __init__(self):
         pass
 
-class defects(object):
-    def __init__(self):
-        pass
-        
-class TestSet(TestLab):
-    def __init__(self):
-        super(self.__class__, self).__init__()
+class Defects(HPALM):
+    def __init__(self, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
 
-    def create(self,path):
-        pass
-    def delete(self, path):
-        pass
+    def get_defects_all(self):
+        url = "{base_url}/qcbin/rest/domains/{domain}/projects/{projects}/defects".format(base_url=self.base_url, domain=self.domain, projects=self.project)
+        logger.debug(url)
+        response = requests.get(url, headers=self.getheaders())
+        logger.debug(response.headers)
+        return response.status_code
+
+    def get_defects_by_id(self, id):
+        url = "{base_url}/qcbin/rest/domains/{domain}/projects/{projects}/defects/{id}".format(base_url=self.base_url, domain=self.domain, projects=self.project, id=id)
+        logger.debug(url)
+        response = requests.get(url, headers=self.getheaders())
+        logger.debug(response.headers)
+        return response.status_code
+
+class TestSet(TestLab):
+    def __init__(self, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
+
+    def create_testset(self,path):
+        raise ALMMethodNotImplementedException("Method not implemented")
+
+    def delete_testset(self, path):
+        raise ALMMethodNotImplementedException("Method not implemented")
 
 class TestInstance(TestSet):
     def __init__(self):
         super(self.__class__, self).__init__()
 
-    def create(self, path):
-        pass
+    def create_ti(self, path):
+        raise ALMMethodNotImplementedException("Method not implemented")
 
-    def delete(self, path):
-        pass
+    def delete_ti(self, path):
+        raise ALMMethodNotImplementedException("Method not implemented")
 
-    def get_test_instance_run_id(self, domain, project, testset_id, test_id, test_ins):
-        pass
+    def get_ti_run_id(self, domain, project, testset_id, test_id, test_ins):
+        raise ALMMethodNotImplementedException("Method not implemented")
 
 class Runs(TestInstance):
-    def __init__(self):
-        super(self.__class__, self).__init__()
+    def __init__(self, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
 
-    def create(self, path):
-        pass
+    def create_runs(self, path):
+        raise ALMMethodNotImplementedException("Method not implemented")
 
-    def delete(self, path):
-        pass
+    def delete_runs(self, path):
+        raise ALMMethodNotImplementedException("Method not implemented")
 
-    def attach_file(self, id, full_path):
+    def attach_file_runs(self, id, full_path):
         """
         Attach file to test instance run
         """
@@ -108,7 +125,7 @@ class Runs(TestInstance):
         headers['content-type'] = 'application/octet-stream'
         headers['slug'] = fname
         uri = self.base_url + self.uri
-        resp = self.s.post(uri, params=ftext, headers=headers)
+        resp = requests.post(uri, params=ftext, headers=headers)
         if resp.status_code == 201:
             logger.info("Sucessfully attached file: %s size: %d" %(fname, len(ftext)))
         else:
@@ -119,7 +136,7 @@ class Runs(TestInstance):
         headers = self.getheaders()
         uri = self.base_url + uri
         headers['Accept'] = 'application/octet-stream'
-        resp = self.s.get(uri, headers=headers)
+        resp = requests.get(uri, headers=headers)
         if resp.status_code == 200:
             logger.info("%s data read from file" %(resp.text))
         

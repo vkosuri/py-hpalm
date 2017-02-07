@@ -7,19 +7,27 @@ import argparse
 import logging
 import os
 import requests
-import requests_cache
-from requests_cache import CachedSession
-
-# requests_cache.install_cache('hpalm', backend='sqlite', expire_after=300)
-
-CACHE_BACKEND = 'sqlite'
-CACHE_NAME = 'hpalm_cache'
-FAST_SAVE = False
 
 class ALMException(Exception):
     pass
 
+class ALMMethodNotImplementedException(Exception):
+    pass
+
 logger = logging.getLogger(__name__)
+
+def logging_cfg(filename='hpalm.log'):
+    """ Create a FileHandler based logfile for logging """
+    global logger
+
+    file_path = os.path.join(os.getcwd(), filename)
+
+    logging.basicConfig(datefmt='%H:%M:%S',
+                        format = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s",
+                        filename=file_path,
+                        level=logging.NOTSET)
+
+    logger = logging.getLogger(__name__)
 
 def hp_alm_parser():
     """ Setup commandline parser """
@@ -54,21 +62,29 @@ class HPALM(object):
     headers = None
 
     def __init__(self, **kwargs):
-        self.s = CachedSession(CACHE_NAME, backend=CACHE_BACKEND, fast_save=FAST_SAVE)
-
         self.base_url = kwargs.get('base_url', None)
         self.username = kwargs.get('username', None)
         self.password = kwargs.get('password', None)
         self.domain = kwargs.get('domain', None)
         self.project = kwargs.get('project', None)
         self.verify = kwargs.get('verify', False)
+        self.alm_version = kwargs.get('alm_version', 11)
+        log_msg = kwargs.get('log_msg', 1)
 
         if not (kwargs['base_url'] or kwargs['username'] or  kwargs['password'] or kwargs['domain'] or kwargs['project']):
             raise ALMException("Please provide all mandatory params")
 
+        if log_msg:
+            logging_cfg()
 
     def getheaders(self):
         return self.headers
+
+    def is_authenticated(self):
+        url = "{base_url}/qcbin/rest/is-authenticated".format(base_url=self.base_url)
+        resp = requests.get(url, headers=self.getheaders())
+        logger.debug(resp.text)
+        return resp.status_code
 
     def login(self):
         """
@@ -77,16 +93,16 @@ class HPALM(object):
         headers = {'Content-Type' : 'application/xml'}
         authurl = self.base_url + '/qcbin/rest/is-authenticated'
         resp = requests.get(authurl, headers=headers, verify=False)
-        # print resp.headers
-        # print resp.headers['WWW-Authenticate']
+        logger.debug("Response headers: %s" %resp.headers)
         lwssocookie = resp.headers['WWW-Authenticate']
         headers = {'Cookie' : lwssocookie}
         headers["Accept"] = 'application/xml'
         login_url = self.base_url + '/qcbin/authentication-point/authenticate'
-        resp = self.s.get(login_url, headers=headers, auth=HTTPBasicAuth(self.username, self.password), verify=self.verify)
-        # print resp.headers
+        if self.alm_version == 11:
+            resp = requests.get(login_url, headers=headers, auth=HTTPBasicAuth(self.username, self.password), verify=self.verify)
+        logger.debug("Login resposne headers %s" %resp.headers)
         qc_session = resp.headers['Set-Cookie']
-        # print qc_session        
+        logger.debug("Is QC session launched: %s" %qc_session)
         cookie = ";".join((lwssocookie, qc_session))
         self.headers = {'content-type' : 'application/xml'}
         self.headers['accept'] = 'application/xml'
@@ -99,7 +115,7 @@ class HPALM(object):
 
     def logout(self):
         uri = self.base_url + '/qcbin/authentication-point/logout'
-        resp = self.s.get(uri, headers=self.headers)
+        resp = requests.get(uri, headers=self.headers)
         if resp.status_code == 200:
             logger.info("%s  %s logged out alm" %(resp.status_code, self.username))
         else:
@@ -142,7 +158,7 @@ class TestLab(HPALM):
         headers['content-type'] = 'application/octet-stream'
         headers['slug'] = fname
         uri = self.base_url + uri
-        resp = self.s.post(uri, params=ftext, headers=headers)
+        resp = requests.post(uri, params=ftext, headers=headers)
         if resp.status_code == 201:
             logger.info("Sucessfully attached file: %s size: %d" %(fname, len(ftext)))
         else:
@@ -156,7 +172,7 @@ class TestLab(HPALM):
         headers = self.getheaders()
         _uri = self.base_url + uri
         headers['Accept'] = 'application/octet-stream'
-        resp = self.s.get(_uri, headers=headers)
+        resp = requests.get(_uri, headers=headers)
         # if resp.status_code == 200:
             # logger.info("%s data read from file" %(
 
@@ -171,11 +187,11 @@ class TestLab(HPALM):
             if status == "Passed":
                 status = "Failed"
                 xml = "<Entity Type='run'><Fields><Field Name='status'><Value>" + status + "</Value></Field></Fields></Entity>"
-                resp = self.s.put(uri, params=xml, headers=self.getheaders())
+                resp = requests.put(uri, params=xml, headers=self.getheaders())
             else:
                 status = "Passed"
                 xml = "<Entity Type='run'><Fields><Field Name='status'><Value>" + status + "</Value></Field></Fields></Entity>"
-                resp = self.s.put(uri, params=xml, headers=self.getheaders())
+                resp = requests.put(uri, params=xml, headers=self.getheaders())
 
         return resp.status_code
 
@@ -187,7 +203,7 @@ class TestLab(HPALM):
         """
         params = '{cycle-id[' + tid + ']}'
         url = self.base_url + '/qcbin/rest/domains/' + self.domain + '/projects/' + self.project + '/test-instances'
-        response = self.s.get(url, params=params, headers=self.getheaders())
+        response = requests.get(url, params=params, headers=self.getheaders())
         test_inst = text_xml(response.content, "Entity/Fields/Field[@Name='test-instance']/Value/text()")
         return test_inst
 

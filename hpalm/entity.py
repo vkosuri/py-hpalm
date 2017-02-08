@@ -14,15 +14,12 @@ from lxml import etree
 from hpalm import ALMException
 from hpalm import ALMMethodNotImplementedException
 from hpalm import HPALM
+from hpalm import text_to_xml
 import logging
 import os
 import requests
 
 logger = logging.getLogger(__name__)
-
-def text_xml(xml, xpath):
-    dom_tree = etree.fromstring(xml)
-    return dom_tree.xpath(xpath)
 
 class TestLab(HPALM):
     def __init__(self, **kwargs):
@@ -40,7 +37,7 @@ class TestLab(HPALM):
         params = '{cycle-id[' + tid + ']}'
         url = self.base_url + '/qcbin/rest/domains/' + domain + '/projects/' + project + '/test-instances'
         response = requests.get(url, params=params, headers=self.getheaders())
-        test_inst = text_xml(response.content, "Entity/Fields/Field\[@Name='test-instance'\]/Value/text()")
+        test_inst = text_to_xml(response.content, "Entity/Fields/Field\[@Name='test-instance'\]/Value/text()")
         return test_inst
 
 class Tests(object):
@@ -139,4 +136,3 @@ class Runs(TestInstance):
         resp = requests.get(uri, headers=headers)
         if resp.status_code == 200:
             logger.info("%s data read from file" %(resp.text))
-        

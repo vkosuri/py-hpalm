@@ -14,6 +14,10 @@ class ALMException(Exception):
 class ALMMethodNotImplementedException(Exception):
     pass
 
+def text_to_xml(xml, xpath):
+    dom_tree = etree.fromstring(xml)
+    return dom_tree.xpath(xpath)
+
 logger = logging.getLogger(__name__)
 
 def logging_cfg(filename='hpalm.log'):
